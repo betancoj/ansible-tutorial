@@ -1,0 +1,31 @@
+---
+- name: Check and update SUSE systems
+  hosts: suse_hosts
+  become: true
+  gather_facts: false
+
+  tasks:
+    - name: STEP 1 - Check for available updates
+      ansible.builtin.zypper:
+        list_updates: true
+      register: zypper_updates
+
+    - name: Show available updates
+      debug:
+        msg: >
+          {{ inventory_hostname }} has {{ zypper_updates.updates | length }} updates:
+          {{ zypper_updates.updates | map(attribute='name') | list }}
+
+    - name: STEP 2 - Apply updates (only if updates are available)
+      ansible.builtin.zypper:
+        name: '*'
+        state: latest
+      when: zypper_updates.updates | length > 0
+      register: update_result
+
+    - name: Show update summary
+      debug:
+        msg: >
+          {{ inventory_hostname }} updated packages:
+          {{ update_result.changes | default('No updates applied') }}
+
